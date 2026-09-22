@@ -153,15 +153,24 @@ function install() {
   )
 
   // 3. roots.conf — nơi `rv.sh where` đi tìm clone. Không đè nếu đã có.
-  writeRoots()
+  const roots = writeRoots()
 
   // 4. settings.json — thêm allow-list để bớt prompt xin quyền.
   if (!NO_SETTINGS) mergeSettings()
 
   checkDeps()
-  report()
+  report(roots)
 }
 
+function readRoots(file) {
+  return fs.readFileSync(file, 'utf8')
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'))
+}
+
+// Trả về danh sách roots sẽ có hiệu lực sau khi cài — kể cả ở chế độ chạy thử,
+// khi file chưa thật sự được ghi.
 function writeRoots() {
   const dest = path.join(claudeDir, 'review', 'roots.conf')
   // --force chỉ dành cho file của kit. roots.conf là cấu hình của người dùng:
@@ -169,7 +178,7 @@ function writeRoots() {
   if (fs.existsSync(dest) && !valueOf('--roots')) {
     log(`${tag} giữ nguyên  review/roots.conf (đã có — sửa tay nếu cần thêm thư mục)`)
     skipped++
-    return
+    return readRoots(dest)
   }
   const explicit = valueOf('--roots')
   let roots
@@ -189,6 +198,7 @@ function writeRoots() {
     ...roots
   ].join('\n') + '\n'
   writeFile(dest, body)
+  return roots
 }
 
 // Chỉ THÊM entry còn thiếu, không xoá gì của người dùng; hỏng JSON thì bỏ qua
@@ -243,7 +253,7 @@ function checkDeps() {
   }
 }
 
-function report() {
+function report(roots) {
   log('')
   log(`Xong: ${wrote} file ghi, ${skipped} file không đổi.`)
   if (warnings.length) {
@@ -257,7 +267,38 @@ function report() {
   log('  /rvpost 123 ten-repo    đăng review đó lên GitHub')
   log('  /rvself                 tự review thay đổi local trước khi tạo PR')
   log('')
+  reportRoots(roots)
+  log('')
   log(`Kiểm tra engine chạy được:  bash ${P.values(claudeDir).RV_BASH} whoami`)
+}
+
+// /rvpr chỉ tìm clone trong các thư mục này — repo nằm chỗ khác thì lệnh dừng ở
+// bước đầu. Nói rõ ngay lúc cài để người dùng không phải đoán.
+function reportRoots(roots) {
+  log(`/rvpr tìm clone của repo trong các thư mục (review/roots.conf)${DRY ? ' — sẽ ghi' : ''}:`)
+  for (const r of roots) log(`  ${r}`)
+  const example = ['code', 'work'].map((d) => P.toBashPath(path.join(os.homedir(), d))).join(',')
+  log('Repo của bạn nằm chỗ khác? Thêm một dòng vào file trên, hoặc cài lại:')
+  log(`  ${rerunCommand()} --roots ${example}`)
+}
+
+// Gợi ý đúng lệnh mà người dùng đã dùng để cài: qua npx thì in lại lệnh npx (lấy
+// từ trường `repository` — bản fork tự đúng), chạy từ bản clone thì in đường dẫn
+// tới install.js của bản clone đó.
+function rerunCommand() {
+  const viaNpx = __dirname.split(path.sep).includes('_npx')
+  let repo
+  try {
+    repo = require('../package.json').repository
+  } catch (_) {}
+  const spec = typeof repo === 'string' ? repo : repo && repo.url
+  if (viaNpx && spec) {
+    // "github:owner/repo" dùng thẳng; URL đầy đủ thì rút về dạng đó.
+    const m = /github\.com[/:]([^/]+\/[^/.]+)/.exec(spec)
+    return `npx ${m ? `github:${m[1]}` : spec}`
+  }
+  // Dấu "/" chạy được ở cả Git Bash, PowerShell lẫn cmd; "\" thì Git Bash hiểu là escape.
+  return `node ${path.join(ROOT, 'bin', 'install.js').split(path.sep).join('/')}`
 }
 
 try {

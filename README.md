@@ -435,6 +435,7 @@ tới `settings.json` (tự xoá mục allow-list nếu muốn).
 
 ```
 claude-review-kit/
+├── .github/workflows/  CI: npm test trên Ubuntu + Windows, Node 18 + 22
 ├── bin/
 │   ├── install.js      npx entry — render template rồi ghi vào ~/.claude
 │   └── sync.js         chiều ngược: ~/.claude -> kit
@@ -444,7 +445,8 @@ claude-review-kit/
 ├── review/             rv.sh + 9 module rubric
 ├── test/
 │   ├── roundtrip.test.js   template render đúng, module khai báo khớp rv.sh
-│   └── stacks.test.js      bảng ca cho bộ phát hiện stack
+│   ├── stacks.test.js      bảng ca cho bộ phát hiện stack
+│   └── install.test.js     chạy installer thật vào thư mục tạm
 ├── docs/
 │   └── PUBLISHING.md   cách publish để `npx claude-review-kit` chạy được
 └── package.json

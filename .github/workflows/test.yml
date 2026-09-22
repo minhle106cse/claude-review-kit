@@ -1,0 +1,36 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Chỉ cần đọc mã nguồn — không ghi gì vào repo, không dùng secret.
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # Windows để bắt lỗi đường dẫn Git Bash (/c/...) và dấu "\"; Linux thay cho
+    # macOS/Linux của người dùng. Hai bản Node: bản thấp nhất còn hỗ trợ và bản mới.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [18, 22]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Ghim theo commit SHA — tag có thể bị ghi đè (xem review/cicd.md).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Kiểm cú pháp script
+        run: node --check bin/install.js && node --check bin/sync.js && node --check lib/paths.js
+      - name: Kiểm cú pháp rv.sh
+        run: bash -n review/rv.sh
+      - run: npm test
