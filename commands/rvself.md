@@ -20,7 +20,10 @@ in lý do + việc tôi cần làm, rồi kết thúc; tôi sẽ gọi lại `/r
 
 ### B0 — Chọn repo và mốc so. LÀM TRƯỚC.
 
-**Đừng dùng `$1`** — gán sai trên client này. Tách `$ARGUMENTS` ra token:
+**Tham số tôi gõ:** `$ARGUMENTS`
+
+(Dòng trên rỗng = không có tham số.) **Đừng dùng `$1`** — gán sai trên client
+này. Tách dòng tham số trên ra token theo khoảng trắng và nhận dạng:
 
 | Token | Nghĩa |
 |---|---|
@@ -29,9 +32,12 @@ in lý do + việc tôi cần làm, rồi kết thúc; tôi sẽ gọi lại `/r
 
 Không có token repo → `<D>` = `.` (repo ở cwd).
 
-Khối "Bối cảnh" liệt kê submodule của repo hiện tại. cwd là superproject mà
-thay đổi thật nằm trong submodule → bảo tôi chạy `/rvself <tên con>`, DỪNG.
-Đừng review con trỏ commit.
+Có token repo → **dùng nó, bỏ qua cwd hoàn toàn**, kể cả khi cwd là
+superproject có submodule đổi — tôi đã chọn repo rồi.
+
+Chỉ khi **không** có token repo: khối "Bối cảnh" liệt kê submodule của repo ở
+cwd. cwd là superproject mà thay đổi thật nằm trong submodule → bảo tôi chạy
+`/rvself <tên con>`, DỪNG. Đừng review con trỏ commit.
 
 Mọi lệnh RV mang `-C <D>`. Nói rõ `<D>` và mốc so ở dòng đầu output.
 
@@ -41,8 +47,10 @@ Mọi lệnh RV mang `-C <D>`. Nói rõ `<D>` và mốc so ở dòng đầu outp
   **mọi commit trên nhánh + thay đổi chưa commit**.
 - không có → `<SO>` rỗng: chỉ thay đổi **chưa commit** (so với HEAD).
   Nếu B2 ra **rỗng** → nhiều khả năng đã commit hết. Chạy `RV -C <D> defbase`,
-  lấy tên nhánh, đặt `<SO>` = `--base <nhánh đó>`, nói rõ đã tự chuyển, chạy lại
-  B2. Vẫn rỗng → "không có gì để review", DỪNG.
+  lấy tên nhánh (dòng đầu stdout; dòng `# rv.sh:` giải thích vì sao chọn), đặt
+  `<SO>` = `--base <nhánh đó>`, nói rõ đã tự chuyển và **nhánh đoán được** —
+  đoán sai đích PR thì tôi gọi lại với `base <nhánh>`. Chạy lại B2. Vẫn rỗng →
+  "không có gì để review", DỪNG.
 
 Review thay đổi local như thể đây là PR của người khác. Nghiêm khắc — mục
 đích là bắt lỗi trước khi người khác thấy.

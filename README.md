@@ -93,7 +93,7 @@ Không cần cài gì vào máy, không để lại package toàn cục.
 Ghim một bản phát hành cụ thể (xem danh sách ở tab Releases/Tags của repo):
 
 ```bash
-npx github:minhle106cse/claude-review-kit#v1.0.4
+npx github:minhle106cse/claude-review-kit#v1.0.5
 ```
 
 > **Kit chưa được publish lên npm.** Đừng chạy `npx claude-review-kit` (không có
@@ -271,7 +271,9 @@ khi bạn nói rõ trong lượt đó là đã tự đọc lại (vd `/rvpost 77
 ```
 
 Mặc định so với `HEAD`. Nếu không còn gì chưa commit (đã commit hết trên nhánh feature),
-lệnh tự chuyển sang so với nhánh mặc định của `origin` và nói rõ đã chuyển. So theo
+lệnh tự đoán nhánh base: trong `origin/HEAD`, `develop`, `dev`, `main`, `master`, chọn
+nhánh có merge-base gần nhất (repo để mặc định `main` nhưng PR vào `develop` vẫn đoán
+đúng), và nói rõ đã đoán gì — sai thì gọi lại với `base <nhánh>`. So theo
 `origin/<nhánh>` ở lần fetch gần nhất — `git fetch` trước nếu base vừa có commit mới.
 
 Chạy trong context riêng như `/rvpr` (rubric và diff không làm đầy phiên đang code), in

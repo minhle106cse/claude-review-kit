@@ -399,16 +399,22 @@ JS
     echo "<!-- module nạp tay: $* -->"
     ;;
   defbase)
-    # Nhánh mặc định của origin — mốc so khi đã commit hết trên nhánh feature.
-    b="$("${GIT[@]}" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null)"
-    b="${b#origin/}"
-    if [ -z "$b" ]; then
-      for c in develop main master; do
-        "${GIT[@]}" rev-parse -q --verify "origin/$c^{commit}" >/dev/null && { b="$c"; break; }
-      done
-    fi
-    [ -n "$b" ] || die "không đoán được nhánh mặc định — truyền --base <nhánh>"
-    echo "$b"
+    # Nhánh nhiều khả năng là đích PR — mốc so khi đã commit hết trên nhánh feature.
+    # Không lấy mù origin/HEAD: nhiều team để mặc định `main` nhưng PR vào `develop`
+    # (đo thật: so với main ra 95 commit/248 file, với develop chỉ 4 commit/1 file).
+    # Chọn ứng viên có merge-base GẦN HEAD nhất; hoà thì theo thứ tự ứng viên.
+    head_def="$("${GIT[@]}" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null)"
+    best=""; best_n=""
+    for c in "${head_def#origin/}" develop dev main master; do
+      [ -n "$c" ] || continue
+      "${GIT[@]}" rev-parse -q --verify "origin/$c^{commit}" >/dev/null || continue
+      mb="$("${GIT[@]}" merge-base "origin/$c" HEAD 2>/dev/null)" || continue
+      n="$("${GIT[@]}" rev-list --count "$mb..HEAD")"
+      if [ -z "$best_n" ] || [ "$n" -lt "$best_n" ]; then best="$c"; best_n="$n"; fi
+    done
+    [ -n "$best" ] || die "không đoán được nhánh base — truyền --base <nhánh>"
+    echo "$best"
+    echo "# rv.sh: chọn origin/$best — $best_n commit từ merge-base (nhánh gần nhất trong: origin/HEAD develop dev main master)" >&2
     ;;
   selfstat)
     self_ref "$@"; shift "$SELF_SHIFT"
