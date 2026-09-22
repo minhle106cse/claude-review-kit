@@ -93,7 +93,7 @@ Không cần cài gì vào máy, không để lại package toàn cục.
 Ghim một bản phát hành cụ thể (xem danh sách ở tab Releases/Tags của repo):
 
 ```bash
-npx github:minhle106cse/claude-review-kit#v1.0.1
+npx github:minhle106cse/claude-review-kit#v1.0.2
 ```
 
 > **Kit chưa được publish lên npm.** Đừng chạy `npx claude-review-kit` (không có
@@ -195,7 +195,7 @@ khẳng định không còn placeholder nào sót và không lẫn đường d�
 
 ## Ba lệnh
 
-### `/rvpr <PR> [repo] [nhanh]` — review
+### `/rvpr <PR> [repo] [nhanh] [lượt A/n -- path...]` — review
 
 ```
 /rvpr 776 web-app
@@ -218,8 +218,16 @@ nhiều. Gợi ý:
 - Chuyển phiên sang **Sonnet** trước khi `/rvpr` (`/model sonnet`, hoặc chọn model trong
   app) — bộ rubric được thử chủ yếu trên Sonnet.
 - PR nhỏ / sửa lặt vặt: thêm token `nhanh` để bỏ pha fan-out.
-- PR > 2000 dòng (hoặc > 20 file logic): `/rvpr` dừng lại, đề xuất chia theo thư mục
-  và hỏi — đừng ép review một lần.
+- PR > 2000 dòng (hoặc > 20 file logic): `/rvpr` dừng lại và in sẵn các dòng lệnh chia
+  lượt, vd `/rvpr 444 api lượt A/3 -- src/auth/ src/guards/`. Chạy **từng dòng một,
+  mỗi dòng một lần gọi riêng**. Các lượt ghép dần vào cùng một file review nên
+  `/rvpost` vẫn dùng như thường. Dồn nhiều lượt vào một phiên tốn gấp ~5 lần, vì
+  context phình ra và bị đọc lại ở mỗi lượt gọi tool.
+
+Mỗi file review có dòng **Chi phí** ở mục Vùng mù (tổng token, số agent, context đỉnh),
+lấy từ transcript bằng `rv.sh cost`. Mức đo thực tế: PR nhỏ hoặc `nhanh` khoảng 2M
+token, còn một lần đủ quy trình (fan-out + verifier) khoảng 8–15M. Gần như toàn bộ là
+đọc lại cache, loại token rẻ nhất.
 
 **Kết luận có ba mức**, chọn theo luật chứ không theo cảm giác:
 

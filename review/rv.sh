@@ -13,6 +13,7 @@
 #   rv.sh [-C <dir>] status               git status --short (xem untracked)
 #   rv.sh mod    <tên>...                 nạp tay một/nhiều module rubric
 #   rv.sh detect                          đọc danh sách path ở stdin, in stack (thử regex)
+#   rv.sh cost                            token của lần /rvpr đang chạy + subagent của nó
 #
 #   rv.sh [-C <dir>] selfstat  [path...]  như trên nhưng so với HEAD
 #   rv.sh [-C <dir>] selfdiff  [path...]
@@ -316,6 +317,51 @@ case "$CMD" in
   detect)
     detect_stacks | tr '\n' ' '; echo
     ;;
+  cost)
+    # Đọc transcript của Claude Code: <claude-dir>/projects/*/<session>/subagents/.
+    # Lần /rvpr đang chạy là agent có transcript ghi gần nhất và mở đầu bằng
+    # prompt của rvpr; subagent của nó khai parentAgentId trong .meta.json.
+    command -v node >/dev/null 2>&1 || { echo "không đo được (thiếu node)"; exit 0; }
+    CDIR="$(cd "$DIR/.." && { pwd -W 2>/dev/null || pwd; })"
+    node - "$CDIR" <<'JS' || echo "không đo được"
+const fs = require('fs'), path = require('path')
+const root = path.join(process.argv[2], 'projects')
+const files = []
+for (const p of fs.existsSync(root) ? fs.readdirSync(root) : []) {
+  const pd = path.join(root, p)
+  let ss = []; try { ss = fs.readdirSync(pd) } catch (_) { continue }
+  for (const s of ss) {
+    const sd = path.join(pd, s, 'subagents')
+    let fs2 = []; try { fs2 = fs.readdirSync(sd) } catch (_) { continue }
+    for (const f of fs2) if (/^agent-.*\.jsonl$/.test(f)) {
+      const fp = path.join(sd, f)
+      files.push({ fp, dir: sd, id: f.slice(6, -6), mtime: fs.statSync(fp).mtimeMs })
+    }
+  }
+}
+files.sort((a, b) => b.mtime - a.mtime)
+const head = (fp) => fs.readFileSync(fp, 'utf8').slice(0, 4000)
+const self = files.slice(0, 20).find((f) => /Review PR \*\*#/.test(head(f.fp)) && /`RV` = `bash /.test(head(f.fp)))
+if (!self) { console.log('không đo được (không thấy transcript của lần chạy này)'); process.exit(0) }
+const meta = (f) => { try { return JSON.parse(fs.readFileSync(f.fp.replace(/\.jsonl$/, '.meta.json'), 'utf8')) } catch (_) { return {} } }
+const siblings = files.filter((f) => f.dir === self.dir)
+const tree = [self]
+for (let i = 0; i < tree.length; i++) for (const f of siblings) if (meta(f).parentAgentId === tree[i].id && !tree.includes(f)) tree.push(f)
+let turns = 0, fresh = 0, read = 0, write = 0, out = 0, peak = 0
+const models = new Set()
+for (const f of tree) for (const line of fs.readFileSync(f.fp, 'utf8').split(/\r?\n/)) {
+  let o; try { o = JSON.parse(line) } catch (_) { continue }
+  const u = o.message && o.message.usage
+  if (!u) continue
+  turns++; if (o.message.model) models.add(o.message.model.replace(/^claude-/, ''))
+  fresh += u.input_tokens || 0; read += u.cache_read_input_tokens || 0
+  write += u.cache_creation_input_tokens || 0; out += u.output_tokens || 0
+  if (f === self) peak = Math.max(peak, (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0))
+}
+const M = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : Math.round(n / 1e3) + 'k'
+console.log(`${M(fresh + read + write + out)} token · ${tree.length} agent · ${turns} lượt gọi · đọc cache ${M(read)} · ghi cache ${M(write)} · output ${M(out)} · context đỉnh ${M(peak)} · ${[...models].join('+')} (chưa gồm lượt ghi file)`)
+JS
+    ;;
   stacks)
     [ $# -ge 2 ] || die "stacks <base> <pr>"
     "${GIT[@]}" diff --name-only "origin/$1...refs/remotes/pr/$2" -- "${EXCLUDES[@]}" | detect_stacks | tr '\n' ' '; echo
@@ -348,7 +394,7 @@ case "$CMD" in
     ;;
   selfrubric) "${GIT[@]}" diff --name-only HEAD -- "${EXCLUDES[@]}" | print_rubric ;;
   *)
-    sed -n '2,22p' "$DIR/rv.sh"
+    sed -n '2,23p' "$DIR/rv.sh"
     exit 1
     ;;
 esac

@@ -1,6 +1,6 @@
 {
   "name": "claude-review-kit",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Bộ lệnh review PR cho Claude Code: /rvpr review theo rubric khớp tech stack, /rvpost đăng lên GitHub, /rvself tự review trước khi tạo PR",
   "repository": "github:minhle106cse/claude-review-kit",
   "homepage": "https://github.com/minhle106cse/claude-review-kit#readme",

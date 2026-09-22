@@ -1,6 +1,6 @@
 ---
 description: Review PR theo rubric khớp tech stack, tách MUST / NÊN CÓ, xuất file markdown
-argument-hint: <PR-number> [owner/repo | repo] [nhanh]
+argument-hint: <PR-number> [owner/repo | repo] [nhanh] [lượt A/4 -- path...]
 model: inherit
 effort: high
 context: fork
@@ -31,11 +31,15 @@ và nhận dạng theo **hình dạng**, không theo vị trí:
 | token **toàn chữ số** ĐẦU TIÊN | `<PR>` — số PR |
 | token toàn chữ số hoặc chữ+dấu phẩy TIẾP THEO | bỏ qua (lệnh này không dùng) |
 | đúng chữ `nhanh` | **chế độ nhanh** — bỏ B7.5 (fan-out) kể cả tier VỪA, xem B7.5 |
-| token còn lại | `<REPO>` — tên repo (`owner/repo` hoặc chỉ `repo`) |
+| đúng chữ `lượt` + token kế tiếp dạng `A/4` | `<LƯỢT>` — lượt thứ mấy / tổng mấy lượt, xem B6 "Chia lượt" |
+| `--` | mọi token SAU nó là `<SCOPE>` — các path giới hạn lượt này |
+| token còn lại (trước `--`) | `<REPO>` — tên repo (`owner/repo` hoặc chỉ `repo`) |
 
 Không có token repo → `<REPO>` = repo ở cwd.
 Không có token toàn chữ số → hỏi tôi số PR, **ĐỢI**. Đừng đoán.
 Token `nhanh` (nếu có) → nhớ, dùng ở B7.5.
+Có `<SCOPE>` → từ B4 trở đi, mọi `RV stat` / `RV diff` đều thêm `<SCOPE>` vào
+cuối, và tier ở B6 tính **chỉ trên phạm vi đó**.
 
 Tìm thư mục clone tương ứng:
 
@@ -148,7 +152,35 @@ chưa được đo — coi là mốc dừng để hỏi, không phải chân lý
 - **tier VỪA** — 801–2000 dòng, hoặc 11–20 file KỸ → chỉ file mức `KỸ`:
   `RV -C <D> diff <baseRefName> <PR> <path>...`, nói rõ đã bỏ qua file nào
 - **quá lớn** — > 2000 dòng, hoặc > 20 file KỸ → **DỪNG**, báo con số, đề xuất
-  chia theo thư mục, hỏi tôi
+  chia lượt (xem dưới), hỏi tôi
+
+**Chia lượt.** Chia theo thư mục / cụm chức năng sao cho mỗi lượt ≤ 800 dòng
+code (tier NHỎ), lượt biên bảo mật (auth, quyền, tiền) đứng đầu. In đề xuất
+thành **các dòng lệnh chạy được ngay**, mỗi lượt một dòng:
+
+    /rvpr <PR> <REPO> lượt A/4 -- src/guards/ src/auth/
+    /rvpr <PR> <REPO> lượt B/4 -- src/cache/
+    …
+
+rồi DỪNG. **Mỗi lượt = một lần gọi `/rvpr` riêng**, không bao giờ review
+nhiều lượt trong cùng một lần gọi — kể cả khi tôi bảo "chạy hết một mạch". Chi
+phí token ≈ số lượt gọi tool × độ lớn context: dồn 6 lượt vào một phiên từng
+làm context phình tới ~500k và tốn ~72M token đọc lại, gấp ~5 lần chạy riêng
+từng lượt. Được yêu cầu chạy nhiều lượt → chỉ làm lượt đầu, in lại các dòng
+lệnh còn lại. (Người/agent điều phối gọi lần lượt từng dòng thì đúng cách.)
+
+Khi đang ở một lượt (`<LƯỢT>` có giá trị):
+- Tier tính trên `<SCOPE>`. Scope vẫn > 2000 dòng → DỪNG, đề xuất chia nhỏ tiếp.
+- Lượt đầu (`A/…`) → ghi file review mới như bình thường.
+- Lượt sau → trước B7, `Read` file review hiện có của PR này. Header phải cùng
+  head SHA (`REVIEWED-AT`) — khác SHA thì báo tôi và DỪNG, đừng ghép hai commit.
+  Chỉ đọc để: không báo lại finding đã có, đánh số **tiếp** từ số lớn nhất.
+  Không đọc lại diff của lượt trước.
+- Ghi file: **giữ nguyên** mọi finding cũ, chèn finding lượt này vào đúng mục,
+  cập nhật Kết luận cho **toàn bộ các lượt đã chạy**, header thêm dòng
+  `LƯỢT: A,B/4 — phạm vi lượt này: <SCOPE>`. Chưa đủ lượt → Kết luận thêm câu
+  `(mới review a/n lượt — chưa phải kết luận cuối)`. Nhờ vậy `/rvpost` luôn
+  đọc một file duy nhất.
 
 Ghi lại **tier** (NHỎ / VỪA) — B7.5 và B8 dùng nó để quyết định có fan-out không.
 Ngân sách token của review buộc phải theo tier: PR nhỏ thì một lượt đọc là đủ,
@@ -385,7 +417,13 @@ MERGE ĐƯỢC | NÊN SỬA TRƯỚC KHI MERGE — #a, #b | CẦN SỬA — n BL
   CLAUDE.md <không có file | n vi phạm>
 - Xác minh: <verifier độc lập (1 batch) | tự đối chứng>
 - Pass xác minh: <n giữ CHẮC, m hạ NGỜ, k bỏ>
+- Chi phí: <chép nguyên dòng `RV cost` in ra>
 ```
+
+Ngay trước Write, chạy `RV cost` (không `-C`) — nó cộng token của chính lần
+chạy này và mọi subagent nó gọi. In "không đo được" thì chép nguyên câu đó, đừng
+ước lượng. Lượt sau của PR chia lượt: giữ dòng Chi phí của lượt trước, thêm dòng
+mới có nhãn lượt.
 
 Mục NÊN CÓ nào rỗng thì ghi `(không gặp)` — đừng đi tìm cho có.
 Mục **Vùng mù không bao giờ được rỗng** — luôn có ít nhất một dòng mỗi gạch đầu.
@@ -402,6 +440,8 @@ Mục **Vùng mù không bao giờ được rỗng** — luôn có ít nhất m�
 6. Một dòng vùng mù: `tier nhỏ|vừa|nhanh · n file bị lọc · code n/3 + cổng/test m ·
    quét: không|fan-out 2|inline, n candidate · xác minh: verifier|tự ·
    a CHẮC/b NGỜ/c bỏ`
-7. Đường dẫn file đã ghi
+7. Dòng chi phí từ `RV cost`
+8. Đường dẫn file đã ghi
+9. PR chia lượt mà còn lượt chưa chạy → in lại dòng lệnh `/rvpr … lượt …` kế tiếp
 
 Không in lại toàn bộ review ra terminal.

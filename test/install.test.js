@@ -88,6 +88,21 @@ check('gợi ý cài lại dùng đúng lệnh, không có dấu \\', () => {
   assert.ok(!hint.includes('\\'), `còn dấu \\: ${hint}`)
 })
 
+check('rv.sh cost cộng token của lần /rvpr và subagent con, bỏ agent lạ', () => {
+  const sd = path.join(dir, 'projects', 'p', 'sess', 'subagents')
+  fs.mkdirSync(sd, { recursive: true })
+  const turn = (n) => JSON.stringify({ message: { model: 'claude-x', usage: { input_tokens: n, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 } } })
+  const agent = (id, first, n, parent) => {
+    fs.writeFileSync(path.join(sd, `agent-${id}.jsonl`), [JSON.stringify({ message: { content: first } }), turn(n)].join('\n'))
+    fs.writeFileSync(path.join(sd, `agent-${id}.meta.json`), JSON.stringify(parent ? { parentAgentId: parent } : {}))
+  }
+  agent('stray', 'việc khác', 5000)
+  agent('kid', 'finder', 2000, 'main')
+  agent('main', 'Bối cảnh: x\n`RV` = `bash /x/rv.sh`\nReview PR **#<PR>**', 1000)
+  const out = execFileSync('bash', [path.join(dir, 'review', 'rv.sh'), 'cost'], { encoding: 'utf8' })
+  assert.ok(/^3k token · 2 agent · 2 lượt gọi/.test(out), out)
+})
+
 check('cài lại lần hai không ghi gì', () => {
   const out = run()
   assert.ok(/Xong: 0 file ghi/.test(out), out.split('\n').find((l) => l.startsWith('Xong')))
