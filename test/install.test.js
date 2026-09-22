@@ -93,6 +93,42 @@ check('cài lại lần hai không ghi gì', () => {
   assert.ok(/Xong: 0 file ghi/.test(out), out.split('\n').find((l) => l.startsWith('Xong')))
 })
 
+// Giả lập cấu trúc cache của npx: _npx/<hash>/package.json ghi spec người dùng gõ,
+// package nằm ở _npx/<hash>/node_modules/claude-review-kit.
+const KIT = path.join(__dirname, '..')
+function fakeNpx(spec) {
+  const hashDir = path.join(tmp, '_npx', Math.random().toString(16).slice(2))
+  const pkg = path.join(hashDir, 'node_modules', 'claude-review-kit')
+  fs.mkdirSync(pkg, { recursive: true })
+  for (const d of ['bin', 'lib', 'commands', 'review']) {
+    fs.cpSync(path.join(KIT, d), path.join(pkg, d), { recursive: true })
+  }
+  fs.copyFileSync(path.join(KIT, 'package.json'), path.join(pkg, 'package.json'))
+  if (spec) {
+    fs.writeFileSync(
+      path.join(hashDir, 'package.json'),
+      JSON.stringify({ dependencies: { 'claude-review-kit': spec } })
+    )
+  }
+  const out = execFileSync(
+    process.execPath,
+    [path.join(pkg, 'bin', 'install.js'), '--dry-run', '--dir', path.join(hashDir, '.claude')],
+    { encoding: 'utf8' }
+  )
+  return out.split('\n').find((l) => l.includes('--roots')) || ''
+}
+
+check('qua npx có ghim version → gợi ý giữ nguyên #v1.0.0', () => {
+  const hint = fakeNpx('github:minhle106cse/claude-review-kit#v1.0.0')
+  assert.ok(hint.includes('npx github:minhle106cse/claude-review-kit#v1.0.0 --roots'), hint)
+})
+
+check('qua npx không đọc được spec → quay về trường repository', () => {
+  const hint = fakeNpx(null)
+  const repo = require('../package.json').repository
+  assert.ok(hint.includes(`npx ${repo} --roots`), hint)
+})
+
 check('gỡ cài đặt giữ lại reviews/', () => {
   fs.writeFileSync(path.join(dir, 'reviews', 'keep.md'), 'x')
   run('--uninstall')

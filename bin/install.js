@@ -287,6 +287,17 @@ function reportRoots(roots) {
 // tới install.js của bản clone đó.
 function rerunCommand() {
   const viaNpx = __dirname.split(path.sep).includes('_npx')
+  // npx ghi nguyên spec người dùng gõ (kể cả "#v1.0.0") vào package.json của thư
+  // mục cache cha: _npx/<hash>/package.json → dependencies[<tên package>]. Dùng lại
+  // đúng spec đó để gợi ý không âm thầm đổi bản đã ghim sang bản mới nhất.
+  if (viaNpx) {
+    try {
+      const self = require('../package.json').name
+      const parent = JSON.parse(fs.readFileSync(path.join(ROOT, '..', '..', 'package.json'), 'utf8'))
+      const typed = parent.dependencies && parent.dependencies[self]
+      if (typeof typed === 'string' && typed.length) return `npx ${typed}`
+    } catch (_) {}
+  }
   let repo
   try {
     repo = require('../package.json').repository

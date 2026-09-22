@@ -93,7 +93,7 @@ Không cần cài gì vào máy, không để lại package toàn cục.
 Ghim một bản phát hành cụ thể (xem danh sách ở tab Releases/Tags của repo):
 
 ```bash
-npx github:minhle106cse/claude-review-kit#v1.0.0
+npx github:minhle106cse/claude-review-kit#v1.0.1
 ```
 
 > **Kit chưa được publish lên npm.** Đừng chạy `npx claude-review-kit` (không có

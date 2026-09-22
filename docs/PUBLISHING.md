@@ -94,7 +94,7 @@ git tag v1.0.0 && git push --tags
 Người dùng ghim tag:
 
 ```bash
-npx github:minhle106cse/claude-review-kit#v1.0.0
+npx github:minhle106cse/claude-review-kit#v1.0.1
 ```
 
 Ưu điểm đường này: không cần npm, đẩy commit là người dùng nhận bản mới ngay. Nhược
