@@ -88,7 +88,7 @@ npx -y github:minhle106cse/claude-review-kit --dry-run
 ### Ghim phiên bản
 
 ```bash
-git tag v1.0.0 && git push --tags
+git tag -a v1.0.1 -m "v1.0.1" && git push origin v1.0.1   # khớp "version" trong package.json
 ```
 
 Người dùng ghim tag:
