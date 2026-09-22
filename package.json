@@ -1,0 +1,32 @@
+{
+  "name": "claude-review-kit",
+  "version": "1.0.0",
+  "description": "Bộ lệnh review PR cho Claude Code: /rvpr review theo rubric khớp tech stack, /rvpost đăng lên GitHub, /rvself tự review trước khi tạo PR",
+  "bin": {
+    "claude-review-kit": "bin/install.js"
+  },
+  "scripts": {
+    "install-kit": "node bin/install.js",
+    "sync": "node bin/sync.js",
+    "test": "node test/roundtrip.test.js && node test/stacks.test.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "commands",
+    "review",
+    "docs",
+    "README.md"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "code-review",
+    "pull-request",
+    "slash-commands"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "license": "MIT"
+}

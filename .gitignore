@@ -1,0 +1,11 @@
+node_modules/
+*.tgz
+*.bak-*
+*.bak
+
+# Trạng thái chạy của rv.sh, riêng theo từng máy — không phải nội dung của kit.
+review/.clones.cache
+review/roots.conf
+
+# File review xuất ra là scratchpad, sổ lưu thật là comment trên GitHub.
+reviews/
