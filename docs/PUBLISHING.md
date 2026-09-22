@@ -88,13 +88,13 @@ npx -y github:minhle106cse/claude-review-kit --dry-run
 ### Ghim phiên bản
 
 ```bash
-git tag -a v1.0.3 -m "v1.0.3" && git push origin v1.0.3   # khớp "version" trong package.json
+git tag -a v1.0.4 -m "v1.0.4" && git push origin v1.0.4   # khớp "version" trong package.json
 ```
 
 Người dùng ghim tag:
 
 ```bash
-npx github:minhle106cse/claude-review-kit#v1.0.3
+npx github:minhle106cse/claude-review-kit#v1.0.4
 ```
 
 Ưu điểm đường này: không cần npm, đẩy commit là người dùng nhận bản mới ngay. Nhược

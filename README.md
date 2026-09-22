@@ -93,7 +93,7 @@ Không cần cài gì vào máy, không để lại package toàn cục.
 Ghim một bản phát hành cụ thể (xem danh sách ở tab Releases/Tags của repo):
 
 ```bash
-npx github:minhle106cse/claude-review-kit#v1.0.3
+npx github:minhle106cse/claude-review-kit#v1.0.4
 ```
 
 > **Kit chưa được publish lên npm.** Đừng chạy `npx claude-review-kit` (không có
@@ -262,14 +262,22 @@ khi bạn nói rõ trong lượt đó là đã tự đọc lại (vd `/rvpost 77
 "đã kiểm") thì mới ghi *"đã được review lại thủ công"*. Nên đọc file review trước khi
 đăng — finding sai đứng tên bạn trên PR của đồng nghiệp.
 
-### `/rvself [path...]` — tự review trước khi tạo PR
+### `/rvself [repo] [base <nhánh>]` — tự review trước khi tạo PR
 
 ```
-/rvself
-/rvself src/app
+/rvself                        thay đổi chưa commit của repo ở cwd
+/rvself web-app                repo khác (tên hoặc đường dẫn)
+/rvself base develop           cả nhánh: mọi commit từ merge-base với develop + chưa commit
 ```
 
-So với `HEAD` thay vì với base của PR. Dùng khi code còn trong working tree.
+Mặc định so với `HEAD`. Nếu không còn gì chưa commit (đã commit hết trên nhánh feature),
+lệnh tự chuyển sang so với nhánh mặc định của `origin` và nói rõ đã chuyển. So theo
+`origin/<nhánh>` ở lần fetch gần nhất — `git fetch` trước nếu base vừa có commit mới.
+
+Chạy trong context riêng như `/rvpr` (rubric và diff không làm đầy phiên đang code), in
+kết quả ra terminal, không ghi file. Finding đánh số liên tục; dòng cuối là
+`KHÔNG NÊN PUSH` / `NÊN SỬA TRƯỚC KHI PUSH — #a` / `OK để push`. File untracked không nằm
+trong diff — nó sẽ nhắc `git add -N <file>` rồi dừng.
 
 ---
 

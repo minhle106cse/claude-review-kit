@@ -15,9 +15,10 @@
 #   rv.sh detect                          đọc danh sách path ở stdin, in stack (thử regex)
 #   rv.sh cost                            token của lần /rvpr đang chạy + subagent của nó
 #
-#   rv.sh [-C <dir>] selfstat  [path...]  như trên nhưng so với HEAD
-#   rv.sh [-C <dir>] selfdiff  [path...]
-#   rv.sh [-C <dir>] selfrubric
+#   rv.sh [-C <dir>] selfstat  [--base <nhánh>] [path...]   như trên, so với HEAD
+#   rv.sh [-C <dir>] selfdiff  [--base <nhánh>] [path...]   (--base: so với merge-base
+#   rv.sh [-C <dir>] selfrubric [--base <nhánh>]              → gồm cả commit trên nhánh)
+#   rv.sh [-C <dir>] defbase                nhánh mặc định của origin
 #
 # -C nhận đường dẫn tuyệt đối hoặc tương đối. Không có -C thì chạy ở cwd.
 # Danh sách thư mục để `where` đi tìm: review/roots.conf (mỗi dòng một path).
@@ -192,6 +193,22 @@ print_rubric() {
     echo "Đối chiếu với bảng phân loại file. Nếu diff thật sự có loại code đó, nạp tay:"
     echo "    RV mod <tên>"
   fi
+}
+
+# Mốc so của self*: mặc định HEAD (chỉ thay đổi chưa commit). `--base <nhánh>` →
+# merge-base với nhánh đó (ưu tiên origin/<nhánh>), diff tới cây làm việc = mọi
+# commit trên nhánh + thay đổi chưa commit. Đặt SELF_REF và SELF_SHIFT.
+self_ref() {
+  SELF_REF=HEAD; SELF_SHIFT=0
+  [ "${1:-}" = --base ] || return 0
+  [ $# -ge 2 ] || die "--base <nhánh>"
+  local b="$2" ref
+  if "${GIT[@]}" rev-parse -q --verify "origin/$b^{commit}" >/dev/null; then ref="origin/$b"
+  elif "${GIT[@]}" rev-parse -q --verify "$b^{commit}" >/dev/null; then ref="$b"
+  else die "không thấy nhánh '$b' (đã thử origin/$b và $b)"; fi
+  SELF_REF="$("${GIT[@]}" merge-base "$ref" HEAD)" || die "không có merge-base giữa $ref và HEAD"
+  SELF_SHIFT=2
+  echo "# rv.sh: so với merge-base $ref = ${SELF_REF:0:8} (commit trên nhánh + chưa commit; $ref theo lần fetch gần nhất)"
 }
 
 # Liệt kê những gì diff KHÔNG cho nhìn thấy. $1 = range của git diff.
@@ -381,20 +398,37 @@ JS
     done
     echo "<!-- module nạp tay: $* -->"
     ;;
+  defbase)
+    # Nhánh mặc định của origin — mốc so khi đã commit hết trên nhánh feature.
+    b="$("${GIT[@]}" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null)"
+    b="${b#origin/}"
+    if [ -z "$b" ]; then
+      for c in develop main master; do
+        "${GIT[@]}" rev-parse -q --verify "origin/$c^{commit}" >/dev/null && { b="$c"; break; }
+      done
+    fi
+    [ -n "$b" ] || die "không đoán được nhánh mặc định — truyền --base <nhánh>"
+    echo "$b"
+    ;;
   selfstat)
-    FILES="$("${GIT[@]}" diff --name-only HEAD -- "$@" "${EXCLUDES[@]}")"
+    self_ref "$@"; shift "$SELF_SHIFT"
+    FILES="$("${GIT[@]}" diff --name-only "$SELF_REF" -- "$@" "${EXCLUDES[@]}")"
     set_ws_flag "$FILES"
-    "${GIT[@]}" diff --stat ${WS[@]+"${WS[@]}"} HEAD -- "$@" "${EXCLUDES[@]}"
-    report_blind_spots HEAD
+    "${GIT[@]}" diff --stat ${WS[@]+"${WS[@]}"} "$SELF_REF" -- "$@" "${EXCLUDES[@]}"
+    report_blind_spots "$SELF_REF"
     ;;
   selfdiff)
-    FILES="$("${GIT[@]}" diff --name-only HEAD -- "$@" "${EXCLUDES[@]}")"
+    self_ref "$@"; shift "$SELF_SHIFT"
+    FILES="$("${GIT[@]}" diff --name-only "$SELF_REF" -- "$@" "${EXCLUDES[@]}")"
     set_ws_flag "$FILES"
-    "${GIT[@]}" diff ${WS[@]+"${WS[@]}"} HEAD -- "$@" "${EXCLUDES[@]}"
+    "${GIT[@]}" diff ${WS[@]+"${WS[@]}"} "$SELF_REF" -- "$@" "${EXCLUDES[@]}"
     ;;
-  selfrubric) "${GIT[@]}" diff --name-only HEAD -- "${EXCLUDES[@]}" | print_rubric ;;
+  selfrubric)
+    self_ref "$@"; shift "$SELF_SHIFT"
+    "${GIT[@]}" diff --name-only "$SELF_REF" -- "${EXCLUDES[@]}" | print_rubric
+    ;;
   *)
-    sed -n '2,23p' "$DIR/rv.sh"
+    sed -n '2,24p' "$DIR/rv.sh"
     exit 1
     ;;
 esac
