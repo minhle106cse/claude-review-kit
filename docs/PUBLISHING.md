@@ -1,5 +1,10 @@
 # Làm sao để `npx claude-review-kit` chạy được
 
+> **Trạng thái hiện tại:** kit mới phát hành qua GitHub (đường 1), **chưa** publish lên
+> npm. Cho tới khi làm xong đường 2, người dùng phải dùng
+> `npx github:minhle106cse/claude-review-kit` — `npx claude-review-kit` sẽ tải package
+> npm cùng tên của người khác nếu có ai đăng ký tên đó.
+
 Mục tiêu: người khác gõ một dòng là cài xong, giống các skill/CLI "trên mạng".
 
 ```bash

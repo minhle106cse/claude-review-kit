@@ -30,13 +30,13 @@ const NO_SETTINGS = has('--no-settings')
 if (has('--help') || has('-h')) {
   console.log(`claude-review-kit — cài bộ lệnh review PR cho Claude Code
 
-  npx claude-review-kit                 cài vào ~/.claude
-  npx claude-review-kit --dry-run       in ra sẽ làm gì, không ghi file
-  npx claude-review-kit --force         ghi đè cả khi file đích đã đổi
-  npx claude-review-kit --uninstall     gỡ ra (giữ lại thư mục reviews/)
-  npx claude-review-kit --dir <path>    cài vào thư mục .claude khác
-  npx claude-review-kit --roots a,b     đặt sẵn thư mục chứa clone cho rv.sh where
-  npx claude-review-kit --no-settings   không đụng vào settings.json
+  npx github:minhle106cse/claude-review-kit                 cài vào ~/.claude
+  npx github:minhle106cse/claude-review-kit --dry-run       in ra sẽ làm gì, không ghi file
+  npx github:minhle106cse/claude-review-kit --force         ghi đè cả khi file đích đã đổi
+  npx github:minhle106cse/claude-review-kit --uninstall     gỡ ra (giữ lại thư mục reviews/)
+  npx github:minhle106cse/claude-review-kit --dir <path>    cài vào thư mục .claude khác
+  npx github:minhle106cse/claude-review-kit --roots a,b     đặt sẵn thư mục chứa clone cho rv.sh where
+  npx github:minhle106cse/claude-review-kit --no-settings   không đụng vào settings.json
 
 Biến môi trường: CLAUDE_CONFIG_DIR đổi thư mục đích (mặc định ~/.claude).`)
   process.exit(0)

@@ -19,6 +19,49 @@ rubric theo tech stack của chính PR đang xem.
   lên GitHub, `/rvpost` so lại SHA: head đã đổi thì dừng, không đăng finding về code
   không còn tồn tại.
 
+> **Ngôn ngữ:** prompt, rubric, file review và comment `/rvpost` đăng lên PR đều bằng
+> **tiếng Việt**. Team đọc ngôn ngữ khác thì cần dịch `commands/*.md` và `review/*.md`
+> trước khi dùng `/rvpost`.
+
+---
+
+## Bắt đầu nhanh
+
+```bash
+npx github:minhle106cse/claude-review-kit
+```
+
+1. Đọc cuối output của lệnh cài: nó in các thư mục mà `/rvpr` sẽ tìm clone. Repo của
+   bạn nằm chỗ khác thì cài lại với `--roots <thư mục 1>,<thư mục 2>`.
+2. Mở lại phiên Claude Code (slash command chỉ nạp lúc khởi động).
+3. Trong Claude Code, review một PR **đang mở**:
+   ```
+   /rvpr 123 owner/repo
+   ```
+4. Đọc file review nó ghi ra, rồi mới đăng lên PR:
+   ```
+   /rvpost 123 owner/repo nháp     xem trước nội dung sẽ đăng
+   /rvpost 123 owner/repo          đăng (Claude Code sẽ hỏi quyền trước khi gọi GitHub)
+   ```
+
+Output ở terminal sau `/rvpr` trông như sau (ví dụ minh hoạ):
+
+```
+<D> = /c/Users/ten/code/web-app
+
+Kết luận: CẦN SỬA — 1 BLOCKER
+Stack: base typescript react · module không nạp: backend sql terraform python go cicd
+
+MUST
+1. src/app/orders/actions.ts:42 — [BLOCKER] — server action cập nhật đơn hàng không kiểm
+   đơn thuộc về người gọi (chỉ kiểm đăng nhập)
+2. src/components/order-list.tsx:88 — [NIT] — key là index trong danh sách có sắp xếp
+
+NÊN CÓ: 0 trong file PR chạm · 1 ngoài phạm vi
+Vùng mù: tier nhỏ · 0 file bị lọc · code 1/3 + cổng/test 2 · xác minh: tự · 2 CHẮC/0 NGỜ/0 bỏ
+File review: ~/.claude/reviews/web-app-PR123.md
+```
+
 ---
 
 ## Cài đặt
@@ -27,7 +70,7 @@ rubric theo tech stack của chính PR đang xem.
 
 | Thứ | Vì sao cần | Kiểm tra |
 |---|---|---|
-| Node.js ≥ 16 | chạy trình cài đặt | `node -v` |
+| Node.js ≥ 18 | chạy trình cài đặt (CI kiểm Node 18 và 22) | `node -v` |
 | Git | `rv.sh` chạy trên `git diff` | `git --version` |
 | Bash | Git Bash trên Windows; có sẵn trên macOS/Linux | `bash --version` |
 | [GitHub CLI](https://cli.github.com) đã đăng nhập | đọc & đăng comment PR | `gh auth status` |
@@ -45,25 +88,19 @@ npx github:minhle106cse/claude-review-kit
 ```
 
 `npx` clone repo về cache tạm, đọc `bin` trong `package.json` rồi chạy `bin/install.js`.
-Không cần cài gì vào máy, không để lại package toàn cục. Repo phải public, hoặc máy đang
-chạy phải có quyền `git clone` repo private đó.
+Không cần cài gì vào máy, không để lại package toàn cục.
 
-Chỉ định nhánh/tag cụ thể:
+Ghim một bản phát hành cụ thể (xem danh sách ở tab Releases/Tags của repo):
 
 ```bash
 npx github:minhle106cse/claude-review-kit#v1.0.0
 ```
 
-### Cách 2 — `npx` từ npm (sau khi đã publish)
+> **Kit chưa được publish lên npm.** Đừng chạy `npx claude-review-kit` (không có
+> `github:`): tên đó trên npm không thuộc về repo này, ai đăng ký trước thì lệnh sẽ
+> chạy code của họ. Luôn dùng dạng `npx github:minhle106cse/claude-review-kit`.
 
-```bash
-npx claude-review-kit
-```
-
-Đây là dạng gọn nhất, cũng là dạng các skill "trên mạng" hay dùng. Muốn có nó thì phải
-publish package lên npm trước — xem [docs/PUBLISHING.md](docs/PUBLISHING.md).
-
-### Cách 3 — clone về rồi cài
+### Cách 2 — clone về rồi cài
 
 ```bash
 git clone https://github.com/minhle106cse/claude-review-kit.git
@@ -231,11 +268,17 @@ So với `HEAD` thay vì với base của PR. Dùng khi code còn trong working 
 ### `roots.conf` — nơi tìm clone
 
 `rv.sh where <repo>` quét các thư mục trong `~/.claude/review/roots.conf` để tìm clone
-local. Mỗi dòng một path, dạng Git Bash trên Windows:
+local (sâu tối đa 5 cấp). Mỗi dòng một đường dẫn tuyệt đối — không dùng `~` hay
+`$HOME`, vì file được đọc nguyên văn:
 
 ```
-/c/Users/ten/Vscode
-/c/Users/ten/work
+# Windows (dạng Git Bash)
+/c/Users/ten/code
+/d/work
+
+# macOS / Linux
+/Users/ten/code
+/home/ten/work
 ```
 
 Quét mất khoảng 15 giây nên có cache 24h. Vừa clone repo mới mà `where` chưa thấy:
@@ -286,7 +329,7 @@ Engine không phụ thuộc Claude Code, chạy tay cũng được:
 RV="bash ~/.claude/review/rv.sh"
 
 $RV whoami                        # repo ở cwd + danh sách submodule
-$RV where web-app             # tìm clone local
+$RV where web-app                  # tìm clone local
 $RV -C <dir> fetch develop 776    # nạp ref PR, in SHA
 $RV -C <dir> ref develop 776      # in lại SHA (dùng để so head có đổi không)
 $RV -C <dir> stat develop 776     # thống kê diff đã lọc + báo vùng mù
@@ -313,14 +356,14 @@ Vài quyết định trong bộ lọc đáng biết:
 | Module | Nạp khi diff có | Phủ gì đáng chú ý |
 |---|---|---|
 | `base` | luôn luôn | phạm vi MUST/NÊN CÓ, luật bằng chứng, **mốc hiệu chỉnh BLOCKER/SHOULD**, 7 nhóm kiểm |
-| `typescript` | `.ts .tsx .js .jsx .mjs .cjs` | chỗ compiler bị qua mặt, async, dữ liệu ngoài, bẫy Date/sort/JSON |
-| `react` | `.tsx .jsx`, `components/ hooks/ app/ pages/` | hook, cờ trạng thái, Next.js App Router, server action, race response, Radix |
-| `backend` | `*.controller/service/dto/guard/strategy/worker…`, `.proto`, `api/ grpc/ handlers/ workers/ jobs/ lambdas/` | biên vào/ra, NestJS (ValidationPipe, guard, CQRS, cron), **hợp đồng gRPC/proto**, Lambda+SQS |
-| `sql` | `.sql`, `migrations/`, `*.entity/schema/model`, `prisma/ schemas/ models/` | SQL migration/truy vấn **và MongoDB/Mongoose** (operator injection, filter `undefined`, session transaction, index) |
-| `terraform` | `.tf .tfvars .hcl` | bảo mật, replace ngoài ý muốn, `moved {}`, cặp cấu hình AWS (SQS↔Lambda, alarm, S3) |
-| `python` | `.py` | injection, async, timeout, datetime naive, Lambda handler |
-| `go` | `.go` | goroutine/context, defer, timeout, loop var theo version |
-| `cicd` | Dockerfile, compose, `.github/workflows|actions`, Makefile, `.sh` | secret trong image, script injection trong Actions, OIDC, `set -euo pipefail` |
+| `typescript` | `.ts .tsx .js .jsx .mjs .cjs` | chỗ hệ kiểu bị qua mặt, bất đồng bộ, dữ liệu từ ngoài, bẫy ngày giờ/số/mảng |
+| `react` | `.tsx .jsx`, `components/ hooks/ app/ pages/` | ranh giới server/client, cache theo người dùng, state khi SSR, effect, response về sai thứ tự, form, a11y |
+| `backend` | `*.controller/service/dto/guard/strategy/worker…`, `.proto`, `api/ grpc/ handlers/ workers/ jobs/ lambdas/` | phân quyền/IDOR, xác thực & phiên, biên vào/ra, giao dịch + gọi ra ngoài, job/message, framework DI, **hợp đồng RPC/proto** |
+| `sql` | `.sql`, `migrations/`, `*.entity/schema/model`, `prisma/ schemas/ models/` | SQL **và document store**: injection, filter rỗng ghi nhầm cả bảng, giao dịch, index, migration khi hệ thống đang chạy |
+| `terraform` | `.tf .tfvars .hcl` | thay thế tài nguyên ngoài ý muốn, `moved`/`removed`, bảo mật, compute/LB, messaging, cảnh báo |
+| `python` | `.py` | injection, timeout, async, thời gian không múi giờ, handler serverless |
+| `go` | `.go` | vòng đời goroutine, context, lỗi, tài nguyên, HTTP |
+| `cicd` | Dockerfile, compose, `.github/workflows\|actions`, Makefile, `.sh` | script injection, ghim action, OIDC, secret trong image, script shell |
 
 **Rubric không gắn phiên bản, không gắn repo.** Mỗi rule mô tả một *lỗi bản chất*
 đúng với mọi thư viện/framework cùng loại; tên thư viện chỉ xuất hiện làm ví dụ. Chỗ
@@ -428,6 +471,17 @@ tới `settings.json` (tự xoá mục allow-list nếu muốn).
 | `gh` báo không tìm thấy repo | Remote dùng SSH alias. Mọi lệnh `gh` phải có `-R owner/repo` tường minh. |
 | Review nói về code đã cũ | Head PR đã đổi sau lúc review. Chạy lại `/rvpr` trước khi `/rvpost`. |
 | Module rubric cần thiết không nạp | Phát hiện stack dựa trên tên file. Nạp tay: `$RV mod backend sql`. |
+| `/rvpr` báo diff rỗng / dừng với PR đã merge | Lệnh so PR với nhánh base **hiện tại**. PR đã merge thì base đã chứa hết code của PR nên không còn gì để so. Chỉ dùng cho PR đang mở. |
+| `/rvpr` dừng, đề xuất chia lượt | PR vượt ngưỡng (> 2000 dòng hoặc > 20 file logic). Chọn một nhóm thư mục cho mỗi lượt như nó đề xuất. |
+
+## Giới hạn đã biết
+
+- Chỉ review PR **đang mở** trên GitHub (cần `gh`); không hỗ trợ GitLab/Bitbucket.
+- Review dựa trên diff: bug nằm ở tương tác xa ngoài diff có thể sót — mục "Vùng mù"
+  của mỗi review nói rõ đã không nhìn tới đâu.
+- Output bằng tiếng Việt (xem đầu README).
+- Là **ý kiến thứ hai**, không phải cổng chặn merge: chất lượng chưa được đo trên số
+  lượng PR lớn. Đọc file review trước khi `/rvpost`.
 
 ---
 
@@ -457,4 +511,4 @@ và không có chuỗi phụ thuộc nào để mà mục ruỗng theo thời gi
 
 ## Giấy phép
 
-MIT.
+[MIT](LICENSE).
