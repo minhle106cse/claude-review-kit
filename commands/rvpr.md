@@ -230,8 +230,18 @@ caller **ngoài diff** vỡ vì đổi hợp đồng; (c) luật `CLAUDE.md` b�
   dạng response / điều kiện tiên quyết** của một symbol export ra ngoài file —
   chạy **riêng angle 2** (1 finder, ngân sách như dưới). Đây là lỗ hổng thật
   của tier nhỏ, và nó chỉ tốn 1 agent khi thật sự có contract đổi.
-- **tier VỪA** (không có `nhanh`) → chạy, **tối đa 2 finder** (angle 1 + angle
-  2), kèm điều kiện của angle 1 bên dưới. Không bao giờ 3.
+- **tier VỪA** (không có `nhanh`) → **chỉ chạy khi có tín hiệu**, tối đa 2
+  finder, không bao giờ 3. Mỗi angle có cổng riêng:
+  - angle 1 — theo điều kiện xoá ở dưới (≥ 150 dòng `-` hoặc ≥ 30%).
+  - angle 2 — chỉ khi diff có **ít nhất một** trong: đổi chữ ký / kiểu trả về /
+    hình dạng response / điều kiện tiên quyết của symbol export ra ngoài file ·
+    ghi vào state dùng chung (store, singleton, biến cấp module) · chạm biên
+    quyền / tiền / ghi dữ liệu / migration / hợp đồng API-gRPC-event.
+  Không angle nào đạt cổng → **BỎ QUA B7.5**, ghi Vùng mù
+  `Pha quét: không (tier vừa, không có tín hiệu: <lý do một dòng>)`. PR vừa mà
+  chỉ đổi UI nội bộ, copy, refactor thân hàm thì không cần nổ agent — đó là
+  phần lớn chi phí thừa đã đo được.
+  Ghi rõ cổng nào đạt và vì sao — để người đọc kiểm lại quyết định bỏ quét.
 
 **Angle (c) — CLAUDE.md — parent tự làm, KHÔNG spawn agent.**
 `git -C <D> ls-tree -r pr/<PR> --name-only | grep -iE 'CLAUDE\.(md|local\.md)$'`
@@ -264,7 +274,7 @@ chạy: với mỗi dòng **XOÁ / thay thế**, gọi tên bảo đảm nó đa
 validate, nhánh lỗi, fallback, test), tìm chỗ code mới dựng lại. Không thấy →
 candidate. Không soi code thêm mới.
 
-*Angle 2 — Va chạm ngoài diff.* Luôn chạy ở tier vừa. Hai việc:
+*Angle 2 — Va chạm ngoài diff.* Chạy khi đạt cổng ở trên. Hai việc:
 
 (a) **Caller.** Grep **tối đa 6 symbol** mà diff đổi **chữ ký / kiểu trả về /
     hình dạng response / điều kiện tiên quyết / ném thêm lỗi**. Bỏ qua symbol
@@ -296,7 +306,11 @@ cùng chỗ, cùng lý do → giữ một.
 không spawn verifier: đứng ở vị trí tác giả PR đang phản bác, trả lời ba câu
 hỏi bên dưới cho từng finding. Ghi `Xác minh: tự đối chứng`.
 
-**Tier VỪA** → **một** Agent `Explore` verifier, `run_in_background: false`,
+**Tier VỪA mà sau dedup chỉ còn ≤ 2 finding MUST và không cái nào là BLOCKER**
+→ cũng **tự đối chứng** như trên (verifier ~100k token để kiểm 1–2 SHOULD là
+không đáng). Ghi `Xác minh: tự đối chứng (tier vừa, ≤ 2 finding)`.
+
+**Tier VỪA còn lại** (≥ 3 finding MUST, hoặc có ứng viên BLOCKER) → **một** Agent `Explore` verifier, `run_in_background: false`,
 **một batch duy nhất**. Nhận `<D>` + cách lấy diff + **danh sách candidate
 trần** — KHÔNG lý do, KHÔNG suy luận; điểm của bước này là một cái đầu chưa đầu
 tư gì vào kết luận. Ngân sách: **≤ 12 candidate · ≤ 20 tool call · ≤ ~110k
@@ -412,10 +426,11 @@ MERGE ĐƯỢC | NÊN SỬA TRƯỚC KHI MERGE — #a, #b | CẦN SỬA — n BL
 - Submodule thay đổi: <có/không>
 - File đọc thêm ngoài diff: code <n>/3 — <tên file> · cổng/test: <tên file>
 - Tier B6: <nhỏ | vừa> <+ " · chế độ nhanh" nếu có token `nhanh`>
-- Pha quét B7.5: <không (tier nhỏ) | không (chế độ nhanh) | fan-out 2 angle |
+- Pha quét B7.5: <không (tier nhỏ) | không (chế độ nhanh) | không (tier vừa,
+  không có tín hiệu: …) | fan-out <1|2> angle — cổng đạt: … |
   inline> — <n> candidate; angle 1 <chạy | bỏ, xoá < 150 dòng>;
   CLAUDE.md <không có file | n vi phạm>
-- Xác minh: <verifier độc lập (1 batch) | tự đối chứng>
+- Xác minh: <verifier độc lập (1 batch) | tự đối chứng | tự đối chứng (tier vừa, ≤ 2 finding)>
 - Pass xác minh: <n giữ CHẮC, m hạ NGỜ, k bỏ>
 - Chi phí: <chép nguyên dòng `RV cost` in ra>
 ```

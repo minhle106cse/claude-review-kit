@@ -93,7 +93,7 @@ Không cần cài gì vào máy, không để lại package toàn cục.
 Ghim một bản phát hành cụ thể (xem danh sách ở tab Releases/Tags của repo):
 
 ```bash
-npx github:minhle106cse/claude-review-kit#v1.0.2
+npx github:minhle106cse/claude-review-kit#v1.0.3
 ```
 
 > **Kit chưa được publish lên npm.** Đừng chạy `npx claude-review-kit` (không có
@@ -210,9 +210,11 @@ ghi đè, đó là chủ ý. Sổ lưu thật là comment trên GitHub.
 Thứ tự tham số không quan trọng: token toàn chữ số đầu tiên là số PR, phần còn lại là
 tên repo.
 
-**Chi phí token.** `/rvpr` đặt `model: inherit` + `effort: high`, và mặc định chạy thêm
-pha fan-out (2 agent quét) cùng một verifier độc lập — tức là một lần review gọi model
-vài lượt. Nó dùng model đang chọn của phiên, nên nếu phiên đang để Opus thì tốn hơn
+**Chi phí token.** `/rvpr` đặt `model: inherit` + `effort: high`. Với PR cỡ vừa, nó
+chỉ chạy thêm pha fan-out (tối đa 2 agent quét) khi diff có tín hiệu rủi ro: đổi hợp
+đồng export, ghi state dùng chung, chạm quyền / tiền / dữ liệu / migration / API, hoặc
+xoá nhiều code. Verifier độc lập chỉ chạy khi có ≥ 3 finding MUST hoặc có ứng viên
+BLOCKER. Lệnh dùng model đang chọn của phiên, nên nếu phiên đang để Opus thì tốn hơn
 nhiều. Gợi ý:
 
 - Chuyển phiên sang **Sonnet** trước khi `/rvpr` (`/model sonnet`, hoặc chọn model trong
